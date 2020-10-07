@@ -475,11 +475,19 @@ npeakarea <- as.data.frame(npeakarea_l[[2]])
 print(nrow(npeakarea))
 
 ##writing out normalized peak areas, of all surviving metabolites
-write.table(npeakarea, file = paste0(args[1], '_filtrd_normalized_metabs.tab'), 
+outname <- c(args[1])
+if (vsn == 'yes'){
+  outname <- c(outname, '_VSN_')
+}
+
+if (isd == 'yes'){
+  outname <- c(outname, '_IS_')
+}
+
+write.table(npeakarea, file = paste(c(outname, '_filtered_normalized_metabs.tab'), collapse = ''), 
             sep = '\t', row.names = F, quote = F)
 
 ##now getting differentially abundant peaks
-print(colnames(npeakarea))
 newgroups <- get_groups(npeakarea[,-c(1:32, ncol(npeakarea))])
 
 leaves <- newgroups[which(grepl('Leaf', newgroups))]
@@ -488,7 +496,6 @@ for (tissue in list(leaves, roots)){
   if (length(tissue) >0){
     tname <- unique(tissue[grepl('Ctrl.', tissue)])
     ctrlcol <- which(grepl(tname, colnames(npeakarea)))
-    print(colnames(npeakarea)[ctrlcol])
     treat <- tissue[-which(grepl('Ctrl', tissue))]
     uniq <- unique(treat)
     for (cond in uniq){
@@ -497,9 +504,8 @@ for (tissue in list(leaves, roots)){
       print(colnames(npeakarea)[ttreat])
       both <- get_diff_exp(npeakarea, ctrl = npeakarea[,ctrlcol], stress = npeakarea[,ttreat])
       allpval <- both[[1]]; diff <- both[[2]] 
-      print(paste0(args[1], '_FDR_diff_', cond, '.tab'))
-      write.table(diff, file = paste0(args[1], '_FDR_diff_', cond, '.tab'), sep = '\t', row.names = F, quote = F)
-      write.table(allpval, file = paste0(args[1], '_all_pval_fc_', cond, '.tab'), sep = '\t', row.names = F, quote = F)
+      write.table(diff, file = paste(c(outname, '_FDR_diff_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+      write.table(allpval, file = paste(c(outname, '_all_pval_fc_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
     }
   }
 }
