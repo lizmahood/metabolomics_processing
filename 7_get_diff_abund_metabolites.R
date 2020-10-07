@@ -293,12 +293,8 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
   h <- list()
   tmp <-t(knnasy)
   tmp$groups <- gps
-  print(tmp$groups)
   for(gp in 1:length(unique(gps))){
-    print(gp)
     name <- unique(gps)[gp]
-    print(name)
-    print(grepl(paste0('^',name), tmp$groups))
     h[[unique(gps)[gp]]] <- which(grepl(paste0('^',name), tmp$groups))
   }
   print(str(h))
@@ -306,8 +302,6 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
   gdc <- c()
   for(i in 1:length(h)){
     cls <- h[[i]]
-    #print(head(cls))
-    #print(str(knnasy[,cls]))
     corr <- cor(knnasy[,cls])
     
     ##which columns in h[[i]] have at least 3 correlations < 0.7
@@ -387,7 +381,7 @@ get_diff_exp <- function(pl, ctrl, stress) {
   
   ##which metabolites are Diff abund?
   low <- which((diffmetab$pval <= 0.05) &
-                 abs(diffmetab$ofc) >= 1 & 
+                 abs(diffmetab$ofc) >= 2 & 
                  (diffmetab$wpval <= 0.1 | diffmetab$wpval == min(diffmetab$wpval)))
   
   ##if there are any diff expressed metabolites before fdr, are there any after fdr?
@@ -397,25 +391,20 @@ get_diff_exp <- function(pl, ctrl, stress) {
     ##setting up pvalue for adj p-values. If there are no/very few metabolites
     ##diff expressed with p-value at or lower than pct, increase it by 0.05
     pct <- 0.05
+    adjlow <- which((diffmetab$adj_pval <= pct) & abs(diffmetab$ofc) >= 2 
+                    & diffmetab$wpval <= 0.1)
     
-    while (pct) {
-      adjlow <- which((diffmetab$adj_pval <= pct) & abs(diffmetab$ofc) >= 1 
-                      & diffmetab$wpval <= 0.1)
-      
-      if (length(adjlow) >= 5) {
-        print('Got some FDR Diff abund metabolites! ')
-        print(length(adjlow))
-        out <- data.frame(cbind(pl[adjlow,], diffmetab[adjlow,]))
-        return(list(diffmetab, out))
-        break
-      }else if (pct >= 1) {
-        print('No FDR Diff abund metabolites :(')
-        out <- data.frame(cbind(pl[low,], diffmetab[low,]))
-        return(list(diffmetab, out))
-        break
-      }else {pct <- pct + 0.05}
-      
+    if (length(adjlow) >= 1) {
+      print('Got some FDR Diff abund metabolites! ')
+      print(length(adjlow))
+      out <- data.frame(cbind(pl[adjlow,], diffmetab[adjlow,]))
+      return(list(diffmetab, out))
+    }else {
+      print('No FDR Diff abund metabolites :(')
+      out <- data.frame(cbind(pl[low,], diffmetab[low,]))
+      return(list(diffmetab, out))
     }
+    
   }else {print('No diff abund metabolites at all! :(((')}
   
   return(list(diffmetab, data.frame(pl, diffmetab)))
@@ -472,11 +461,10 @@ npeakarea_l <- vs_norm(pl = peakarea, ccols = ctrlcol, tcols = treatcol,
                        vsnn = varsn, isnm = isd, snmatt = snmat, snsampt = snt, blkgrp = blankgroups)
 
 npeakarea <- as.data.frame(npeakarea_l[[2]])
-print(nrow(npeakarea))
 
 ##writing out normalized peak areas, of all surviving metabolites
 outname <- c(args[1])
-if (vsn == 'yes'){
+if (varsn == 'yes'){
   outname <- c(outname, '_VSN_')
 }
 
@@ -501,11 +489,12 @@ for (tissue in list(leaves, roots)){
     for (cond in uniq){
       print(cond)
       ttreat <- which(grepl(paste0('^', cond), colnames(npeakarea)))
-      print(colnames(npeakarea)[ttreat])
-      both <- get_diff_exp(npeakarea, ctrl = npeakarea[,ctrlcol], stress = npeakarea[,ttreat])
-      allpval <- both[[1]]; diff <- both[[2]] 
-      write.table(diff, file = paste(c(outname, '_FDR_diff_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
-      write.table(allpval, file = paste(c(outname, '_all_pval_fc_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+      if (length(ttreat) > 1 & length(ctrlcol) > 1){
+        both <- get_diff_exp(npeakarea, ctrl = npeakarea[,ctrlcol], stress = npeakarea[,ttreat])
+        allpval <- both[[1]]; diff <- both[[2]] 
+        write.table(diff, file = paste(c(outname, '_FDR_diff_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+        write.table(allpval, file = paste(c(outname, '_all_pval_fc_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+      }else {print('Not enough replicates to find Differentially Abundant metabolites!')}
     }
   }
 }
