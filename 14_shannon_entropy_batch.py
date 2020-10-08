@@ -37,10 +37,13 @@ def parse_input_all(infil):
     list as values. In each sublist is: peak rt, mz and average area
     If the average area is 0 for a condition, it is not included
     '''
-    outd = {}
+    outd = {}; mzd = {}
     with open(infil, 'r') as inf:
         inl = inf.readline()
         conditions = get_groups(inl.strip().split('\t'))
+        ##initialize dict for keeping unique mz per condition
+        for c in conditions.keys():
+            mzd[c] = []
         print(conditions)
         while inl:
             if inl[0].isdigit():
@@ -49,12 +52,13 @@ def parse_input_all(infil):
                 for cond, cols in conditions.items():
                     pkareas = [float(inlst[col]) for col in cols]
                     avgarea = sum(pkareas) / len(pkareas)
-                    if avgarea > 0:
+                    if avgarea > 0 and mz not in mzd[cond]:
+                        mzd[cond].append(mz)
                         if cond in outd.keys():
                             outd[cond].append([rt, mz, avgarea])
                         else:
                             outd[cond] = [[rt, mz, avgarea]]
-            
+
             inl = inf.readline()
     
     return outd
