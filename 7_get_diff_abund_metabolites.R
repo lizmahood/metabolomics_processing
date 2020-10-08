@@ -165,7 +165,9 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
   #'normalization. 5: Detect and remove replicate outliers via correlation 
   #'6: impute (if wanted) 7: vsn (if wanted)
   
-  asycols <- c(ccols, tcols)
+  if (tcols != 0){
+    asycols <- c(ccols, tcols)
+  }else asycols <- ccols
   #print(colnames(pl)[asycols])
   print(paste0('Total metabolites: ', nrow(pl)))
   print(paste0('Total fragmented metabolites: ', length(which(pl$MS.MS.spectrum != ''))))
@@ -257,12 +259,6 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
     knnlis <- imp_per_group(asy2, gps, mdat)
     mdat2 <- knnlis[[1]]
     knnasy <- knnlis[[2]]
-    #asy2 <- asy[-badrow,]
-    #mdat <- pl[-badrow,]
-    #asy2[asy2 == 0] <- NA
-    #missrow  <- which(rowSums(is.na(asy2)) > ncol(asy2)*cutoff)
-    #knnasy <- impute::impute.knn(asy2[-missrow,])$data
-    #mdat2 <- mdat[-missrow,]
     
     print(paste0('Num of metabolites removed from knn, noise or blank: ', length(badrow)))
     print(length(badrow))
@@ -284,7 +280,7 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
     #knnasy <- asy[-badrow,]
     mdat2 <- pl[-badrow,]
   }
-  print(str(knnasy))
+
   write.table(cor(knnasy), file = paste0(args[1], '_cor_after_blank_itsd_smpwght.tab'), sep = '\t', quote = F)
   
   ##7 removing non-correlated replicates
@@ -297,7 +293,6 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
     name <- unique(gps)[gp]
     h[[unique(gps)[gp]]] <- which(grepl(paste0('^',name), tmp$groups))
   }
-  print(str(h))
   
   gdc <- c()
   for(i in 1:length(h)){
@@ -315,8 +310,6 @@ vs_norm <- function(pl, idcol, ccols, tcols, blkcol, sweights, sncol,
   }
   
   knnasy <- knnasy[,gdc]
-  print(str(knnasy))
-  print(colnames(knnasy))
   newh <- list(h[[1]][h[[1]] %in% gdc], h[[2]][h[[2]] %in% gdc])
   newasy <- list(asycols[newh[[1]]], asycols[newh[[2]]])
   
@@ -435,7 +428,9 @@ if (length(args) != 16){
 
 peakarea <- read.table(args[1], sep = '\t', header = T, stringsAsFactors = F, quote = "")
 idcol <- as.numeric(args[2])
-treatcol <- as.numeric(unlist(strsplit(args[3], ',')))
+if (grepl(',', args[3], fixed = T)){
+  treatcol <- as.numeric(unlist(strsplit(args[3], ',')))
+}else treatcol <- 0
 ctrlcol <- as.numeric(unlist(strsplit(args[4], ',')))
 ##are there multiple blanks?
 if (grepl(',', args[5], fixed = T)) {
@@ -475,26 +470,29 @@ if (isd == 'yes'){
 write.table(npeakarea, file = paste(c(outname, '_filtered_normalized_metabs.tab'), collapse = ''), 
             sep = '\t', row.names = F, quote = F)
 
-##now getting differentially abundant peaks
-newgroups <- get_groups(npeakarea[,-c(1:32, ncol(npeakarea))])
-
-leaves <- newgroups[which(grepl('Leaf', newgroups))]
-roots <- newgroups[which(grepl('Root', newgroups))]
-for (tissue in list(leaves, roots)){
-  if (length(tissue) >0){
-    tname <- unique(tissue[grepl('Ctrl.', tissue)])
-    ctrlcol <- which(grepl(tname, colnames(npeakarea)))
-    treat <- tissue[-which(grepl('Ctrl', tissue))]
-    uniq <- unique(treat)
-    for (cond in uniq){
-      print(cond)
-      ttreat <- which(grepl(paste0('^', cond), colnames(npeakarea)))
-      if (length(ttreat) > 1 & length(ctrlcol) > 1){
-        both <- get_diff_exp(npeakarea, ctrl = npeakarea[,ctrlcol], stress = npeakarea[,ttreat])
-        allpval <- both[[1]]; diff <- both[[2]] 
-        write.table(diff, file = paste(c(outname, '_FDR_diff_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
-        write.table(allpval, file = paste(c(outname, '_all_pval_fc_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
-      }else {print('Not enough replicates to find Differentially Abundant metabolites!')}
+##now getting differentially abundant peaks (if there are conditions)
+print(treatcol)
+if (treatcol != 0){
+  newgroups <- get_groups(npeakarea[,-c(1:32, ncol(npeakarea))])
+  
+  leaves <- newgroups[which(grepl('Leaf', newgroups))]
+  roots <- newgroups[which(grepl('Root', newgroups))]
+  for (tissue in list(leaves, roots)){
+    if (length(tissue) >0){
+      tname <- unique(tissue[grepl('Ctrl.', tissue)])
+      ctrlcol <- which(grepl(tname, colnames(npeakarea)))
+      treat <- tissue[-which(grepl('Ctrl', tissue))]
+      uniq <- unique(treat)
+      for (cond in uniq){
+        print(cond)
+        ttreat <- which(grepl(paste0('^', cond), colnames(npeakarea)))
+        if (length(ttreat) > 1 & length(ctrlcol) > 1){
+          both <- get_diff_exp(npeakarea, ctrl = npeakarea[,ctrlcol], stress = npeakarea[,ttreat])
+          allpval <- both[[1]]; diff <- both[[2]] 
+          write.table(diff, file = paste(c(outname, '_FDR_diff_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+          write.table(allpval, file = paste(c(outname, '_all_pval_fc_', cond, '.tab'), collapse = ''), sep = '\t', row.names = F, quote = F)
+        }else {print('Not enough replicates to find Differentially Abundant metabolites!')}
+      }
     }
   }
 }
