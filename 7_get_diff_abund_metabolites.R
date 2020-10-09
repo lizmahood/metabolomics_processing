@@ -357,7 +357,6 @@ get_diff_exp <- function(pl, ctrl, stress) {
     if (ctm == 0) {ctm <- 1e-30}
     stm <- mean(as.numeric(stress[metab,]))
     ifelse(stm == 0, logfc <- 0, logfc <- log2(stm/ctm))
-    if (logfc == Inf) {print(stm, ctm)}
     fc <- c(fc, logfc)
     vals <- as.numeric(unlist(c(ctrl[metab,], stress[metab,])))
     ndf <- cbind(vals, type)
