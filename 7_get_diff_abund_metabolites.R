@@ -368,7 +368,7 @@ get_diff_exp <- function(pl, ctrl, stress) {
   }
   
   ##finding Benjamani-Hochberg fdr corrected metabs
-  diffmetab <- data.frame(pval = tpvals, wpval = wpvals,
+  diffmetab <- data.frame(pl, pval = tpvals, wpval = wpvals,
                           adj_pval = p.adjust(tpvals, method = 'fdr'), 
                           nfold_change = fc, ofc = pl[,ncol(pl)])
   
