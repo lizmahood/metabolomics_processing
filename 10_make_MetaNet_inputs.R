@@ -1,7 +1,6 @@
 ##For making PCC network with MetaNetter
 ##Input is filtered peak area file
 
-print('ARGS: 1) input file (PeakArea) 2) POS or NEG? 3) Leaf OR Root OR Both')
 
 ########Function##########
 
@@ -13,6 +12,13 @@ get_groups <- function(df){
 
 #######Body##########
 argg <- commandArgs(T)
+
+if (length(argg) != 4){
+  stop('ARGS: 1) input file (PeakArea) 2) POS or NEG? 
+      3) Leaf OR Root OR Both
+      4) Experiment name (for ex, All_exps)')
+}
+
 infil <- read.table(argg[1], sep = '\t', stringsAsFactors = F, header = T, quote = "", fill = NA)
 
 ##remove non fragmented metabolites
@@ -29,13 +35,15 @@ if (argg[2] == 'POS'){
   frags <- frags[-which(frags$Adduct.type != '[M+H]+'),]
 }
 
+##ordering columns
+#frags[,c(33:ncol(frags))] <- frags[,order(colnames(frags)[33:ncol(frags)])]
+
 ##writing this out
-write.table(frags, file = paste0('C:/Users/ehm79/Documents/MS_Data/BrachyMetabolites/MetaNetterClustering/', 
-                                 argg[2], '/', basename(argg[1]), '_', argg[3], '_msms.tab'), row.names = F, quote = F, sep = '\t')
+write.table(frags, file = paste0('E:/MS_Data/BrachyMetabolites/MetaNetterClustering/', argg[4], '/',
+                                 basename(argg[1]), '_', argg[3], '_msms.tab'), row.names = F, quote = F, sep = '\t')
 
 
 ##now getting the averages of each group, deleting rest of columns
-frags <- frags[,-ncol(frags)]
 frags <- frags[,-c(1,2,4:32)]
 groups <- get_groups(frags[,2:ncol(frags)])
 
@@ -51,7 +59,7 @@ for (grp in unique(groups)){
 finalout <- cbind(frags[,1], out)
 colnames(finalout) <- c('mass', unique(groups))
 
-write.table(finalout, sep = '\t', file = paste0('C:/Users/ehm79/Documents/MS_Data/BrachyMetabolites/MetaNetterClustering/', argg[2], '/',
+write.table(finalout, sep = '\t', file = paste0('E:/MS_Data/BrachyMetabolites/MetaNetterClustering/', argg[4], '/',
                                                 basename(argg[1]), '_', argg[3], '_INPT.txt'), col.names = T, row.names = F, quote = F)
 
 print('Done!')

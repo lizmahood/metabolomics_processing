@@ -2,9 +2,10 @@
 
 argg <- commandArgs(T)
 
-if (length(argg) != 3){
+if (length(argg) != 4){
   stop('ARGS: 1) PeakArea file (with only MSMS and adducts removed) 
-       2) POS or NEG? 3) Leaf, Root or Both?')
+       2) POS or NEG? 3) Leaf, Root or Both?
+       4) Experiment name (for ex, All_exps)')
 }
 
 ########Function##########
@@ -19,7 +20,6 @@ get_groups <- function(df){
 
 ##getting zscores of values
 infil <- read.table(argg[1], sep = '\t', stringsAsFactors = F, quote = "", fill = NA, header = T)
-infil <- infil[,-ncol(infil)]
 
 toscl <- t(infil[,33:ncol(infil)])
 zscrs <- scale(toscl)
@@ -38,7 +38,7 @@ for (grp in unique(groups)){
 finalout <- cbind(infil[,1], out)
 colnames(finalout) <- c('SPOT', unique(groups))
 
-write.table(finalout, file = paste0('C:/Users/ehm79/Documents/MS_Data/BrachyMetabolites/STEM/', argg[2], '/STEM_input_', argg[3], '.txt'),
+write.table(finalout, file = paste0('E:/MS_Data/BrachyMetabolites/STEM/', argg[4], '/STEM_input_',argg[2], argg[3], '.txt'),
             sep = '\t', row.names = F, quote = F)
 
 print('Done!')
