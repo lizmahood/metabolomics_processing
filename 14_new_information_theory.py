@@ -96,7 +96,9 @@ def find_rdpi(control, test, modus = 'mean'):
                 if modus == 'dist':
                     nonzero['diff'] = nonzero.iloc[:, 1] - nonzero.iloc[:, 0]
                 else:
-                    nonzero['diff'] = abs(nonzero.iloc[:, 0] - nonzero.iloc[:, 1])
+                    topp = abs(nonzero.iloc[:, 0] - nonzero.iloc[:, 1])
+                    bottom = nonzero.iloc[:, 0] + nonzero.iloc[:, 1]
+                    nonzero['diff'] = topp / bottom
                 if modus == 'mean':
                     to_append = pd.Series([name, mean(nonzero['diff'])], index = out.columns)
                 elif modus == 'abssum':
@@ -162,7 +164,9 @@ def find_rdpi_superclass(control, test, aid, superclass, all_rdpi, rdpi_dist):
                     newdf = pd.concat([supdf[ctrlc], supdf[tstc]], axis = 1)
                     nonzero = newdf[(newdf.sum(axis = 1) > 0)]
                     ## For logging how much of the total RDPI is due to each superclass
-                    nonzero['absdiff'] = abs(nonzero.iloc[:, 0] - nonzero.iloc[:, 1])
+                    topp = abs(nonzero.iloc[:, 0] - nonzero.iloc[:, 1])
+                    bottom = nonzero.iloc[:, 0] + nonzero.iloc[:, 1]
+                    nonzero['absdiff'] = topp / bottom
                     tmpl.append(nonzero['absdiff'].sum(axis = 0))
                     ## For getting the peak area changes of the metabolites in each class
                     ## And the percentile of the average peak area change
