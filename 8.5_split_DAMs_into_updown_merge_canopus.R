@@ -14,35 +14,31 @@ get_up_vs_down <- function(damfiles){
     hmm <- unlist(strsplit(fil, '_diff_'))[2]
     cond <- gsub('.tab', '', hmm, fixed = T)
     fildf <- read.table(fil, header = T, sep = '\t', fill = NA, quote = "")
-    condup <- fildf[fildf$nfold_change > 0,]
-    conddown <- fildf[fildf$nfold_change < 0,]
-    olist[[cond]] <- list(condup, conddown)
+    condmean <- rowMeans(fildf[,which(grepl(cond, colnames(fildf)))])
+    ctrlmean <- rowMeans(fildf[,which(grepl('Ctrl', colnames(fildf)))])
+    fildf$ctrlmean <- ctrlmean
+    fildf$treatmean <- condmean
+    fildf$condition <- cond
+    fildf <- fildf[, -which(grepl(cond, colnames(fildf)))]
+    fildf <- fildf[, -which(grepl('Ctrl', colnames(fildf)))]
+    fildf$direction <- ifelse(fildf$nfold_change > 0, 'UP', 'DOWN')
+    olist[[cond]] <- fildf
   }
-  return(olist)
-}
-
-merge_canopus <- function(condlist, canopus, odir){
-  canopus_to_merge <- canopus[, c('name', 'class', 'superclass', 'subclass', 'level.5')]
-  i <- 1                            
-  for (cond in condlist){
-    up <- cond[[1]]
-    down <- cond[[2]]
-    canopus_up <- merge(up, canopus_to_merge, all.x = T, by.x = 'Alignment.ID', by.y = 'name')
-    canopus_down <- merge(down, canopus_to_merge, all.x = T, by.x = 'Alignment.ID',
-                          by.y = 'name')
-    canopus_up[is.na(canopus_up)] <- 'None'
-    canopus_down[is.na(canopus_down)] <- 'None'
-    write.table(canopus_up, file = paste0(odir, '_', names(condlist)[i], '_upDAM_canopus.tsv'),
-                sep = '\t', quote = F, row.names = F)
-    write.table(canopus_down, file = paste0(odir, '_', names(condlist)[i], '_downDAM_canopus.tsv'),
-                sep = '\t', quote = F, row.names = F)
-    i <- i + 1
-  }
+  out <- do.call(rbind.data.frame, olist)
+  return(out)
 }
 
 damfiles <- list.files(argg[1], pattern = 'FDR', full.names = T)
 canopus <- read.table(argg[2], header = T, fill = NA, quote = "", sep = '\t')
+canopus_to_merge <- canopus[, c('name', 'class', 'superclass', 'subclass', 'level.5')]
 
-condlist <- get_up_vs_down(damfiles)
-merge_canopus(condlist, canopus, argg[3])
+conddf <- get_up_vs_down(damfiles)
+odir <- argg[3]
+canopus_dap <- merge(conddf, canopus_to_merge, all.x = T, by.x = 'Alignment.ID', by.y = 'name')
+
+## Sorting first on condition then direction
+canopus_dap <- canopus_dap[with(canopus_dap, order(condition, direction)),]
+write.table(canopus_dap, file = paste0(odir, '_all_updown_DAM_canopus.tsv'),
+            sep = '\t', quote = F, row.names = F)
+
 print('Done!')

@@ -22,10 +22,24 @@ for (level in 1:4){
   not_classified <- which(classis[,level] == 'None')
   both <- classis[,c(this_canopus, this_cf)]
   both <- both[-not_classified,]
+  if (level == 2){
+    wrong_class <- c()
+    for (cls in unique(both$CF_class)){
+      subset <- both[which(both$CF_class == cls),]
+      print(subset)
+      if (!(cls %in% c('Phenols', 'Glycerophospholipids'))){
+        perct_wrong <- length(which(!(subset$class == subset$CF_class))) / nrow(subset)
+        wrong_class <- c(wrong_class, perct_wrong)
+      }
+    }
+    print(median(wrong_class))
+    print(sort(wrong_class))
+  }
   
   print(this_canopus)
   print(nrow(both))
   print((length(which(both[,1] == both[,2]))))
   print((length(which(both[,1] == both[,2]))) / nrow(both))
 }
+
 
